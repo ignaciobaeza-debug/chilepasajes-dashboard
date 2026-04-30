@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chilepasajes · Dashboard v5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bl:#2563EB;--bl2:#DBEAFE;--bl3:#93C5FD;
+  --tl:#0D9488;--am:#D97706;--am2:#FEF3C7;
+  --gr:#6B7280;--gr2:#F3F4F6;
+  --gn:#059669;--gn2:#D1FAE5;
+  --rd:#DC2626;--rd2:#FEE2E2;
+  --pu:#7C3AED;--or:#EA580C;
+  --tx:#111827;--tx2:#6B7280;--tx3:#9CA3AF;
+  --bd:#E5E7EB;--sf:#F9FAFB;--wh:#fff;
+  --r:10px;--rl:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#EEF2F7;color:var(--tx);font-size:14px}
+.hdr{background:var(--wh);border-bottom:1px solid var(--bd);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;flex-wrap:wrap;gap:8px}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;background:var(--bl);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px}
+.hdr-title{font-size:16px;font-weight:700}.hdr-sub{font-size:11px;color:var(--tx3)}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bdg{font-size:11px;color:var(--tx3);background:var(--sf);padding:4px 10px;border-radius:20px;border:1px solid var(--bd)}
+.sync-btn{padding:6px 14px;border:1px solid var(--bd);border-radius:var(--r);background:var(--wh);cursor:pointer;font-size:12px;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:5px;transition:all .12s}
+.sync-btn:hover{border-color:var(--bl3);color:var(--bl)}.sync-btn.loading{opacity:.6;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}.spin{display:inline-block;animation:spin .7s linear infinite}
+.tabs{background:var(--wh);border-bottom:1px solid var(--bd);padding:0 24px;display:flex;overflow-x:auto;position:sticky;top:57px;z-index:299;scrollbar-width:none}
+.tab{padding:11px 16px;border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--tx2);border-bottom:2px solid transparent;white-space:nowrap;font-weight:500;transition:all .15s}
+.tab.on{color:var(--bl);border-bottom-color:var(--bl)}.tab:hover:not(.on){color:var(--tx);background:var(--sf)}
+.fbar{background:var(--wh);border-bottom:1px solid var(--bd);padding:8px 24px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:sticky;top:101px;z-index:298}
+.flabel{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.fb{padding:5px 12px;border:1px solid var(--bd);background:var(--wh);border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;color:var(--tx2);transition:all .12s;white-space:nowrap}
+.fb.on{background:var(--bl);color:#fff;border-color:var(--bl)}.fb:hover:not(.on){border-color:var(--bl3);color:var(--bl)}
+.range-lbl{font-size:11px;color:var(--tx3);margin-left:auto;background:var(--sf);padding:4px 10px;border-radius:20px;border:1px solid var(--bd);white-space:nowrap}
+.dprow{display:none;align-items:center;gap:8px;flex-basis:100%;padding-top:6px;border-top:1px solid var(--bd);margin-top:2px}
+.dprow.show{display:flex}.dprow label{font-size:11px;color:var(--tx2);font-weight:600}
+.dprow input[type=date]{border:1px solid var(--bd);border-radius:var(--r);padding:4px 8px;font-size:12px;color:var(--tx);background:var(--wh)}
+.dp-ok{padding:5px 14px;background:var(--bl);color:#fff;border:none;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600}
+.lov{position:fixed;inset:0;background:rgba(238,242,247,.92);display:flex;align-items:center;justify-content:center;z-index:999}
+.lov.hidden{display:none}
+.ld-box{background:var(--wh);border-radius:var(--rl);padding:32px 40px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.1);min-width:290px}
+.ld-icon{font-size:32px;margin-bottom:10px}.ld-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.ld-msg{font-size:12px;color:var(--tx3)}
+.prog-bar{width:240px;height:5px;background:var(--bd);border-radius:4px;margin:14px auto 0;overflow:hidden}
+.prog-fill{height:100%;background:var(--bl);border-radius:4px;transition:width .35s ease;width:0%}
+.ld-err{color:var(--rd);font-size:12px;margin-top:12px;line-height:1.5;display:none;background:var(--rd2);padding:8px 10px;border-radius:var(--r);text-align:left}
+.main{padding:20px 24px;max-width:1440px;margin:0 auto}
+.sec{display:none}.sec.on{display:block}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:14px}
+.kcard{background:var(--wh);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px}
+.klbl{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.kval{font-size:22px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.kft{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap}
+.ksub{font-size:11px;color:var(--tx2)}
+.dt{font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:20px}
+.dt.up{background:var(--gn2);color:var(--gn)}.dt.dn{background:var(--rd2);color:var(--rd)}.dt.nt{background:var(--gr2);color:var(--gr)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:700px){.g2{grid-template-columns:1fr}}
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:var(--rl);padding:16px 18px;margin-bottom:12px}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.ctitle{font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em}
+.cnote{font-size:11px;color:var(--tx3)}.cw{position:relative}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--tx2)}
+.leg span{display:flex;align-items:center;gap:5px}
+.ld{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 10px;border-bottom:2px solid var(--bd);font-weight:700;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--bl)}
+td{padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.tg{background:var(--gn2);color:var(--gn)}.tw{background:var(--am2);color:var(--am)}.tb{background:var(--rd2);color:var(--rd)}
+.rbar{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)}
+.rbar:last-child{border-bottom:none}
+.rname{font-size:12px;font-weight:600;flex:0 0 170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rtrack{flex:1;height:7px;background:var(--gr2);border-radius:4px}
+.rfill{height:7px;border-radius:4px}
+.rvals{text-align:right;min-width:82px}
+.rv1{font-size:12px;font-weight:700}.rv2{font-size:10px;color:var(--tx3)}
+.nota{background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--r);padding:10px 14px;font-size:12px;color:#92400E;margin-bottom:12px;line-height:1.6}
+.btn{padding:6px 14px;border:1px solid var(--bd);border-radius:var(--r);background:var(--wh);cursor:pointer;font-size:12px;font-weight:600;color:var(--tx);transition:all .12s}
+.btn:hover{border-color:var(--bl3);color:var(--bl)}.btn.on{background:var(--bl);color:#fff;border-color:var(--bl)}
+.sel{padding:5px 12px;border:1px solid var(--bd);border-radius:20px;font-size:12px;color:var(--tx2);background:var(--wh);cursor:pointer;outline:none;transition:all .12s}
+.sel:hover,.sel:focus{border-color:var(--bl3);color:var(--bl)}
+.cbar-wrap{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:5px}
+.cmp-grid{display:grid;gap:1px;background:var(--bd);border-radius:var(--r);overflow:hidden;font-size:12px}
+.cmp-cell{background:var(--wh);padding:9px 12px}
+.cmp-hd{background:var(--sf);font-weight:700;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em}
+</style>
+</head>
+<body>
+
+<div class="lov" id="lov">
+  <div class="ld-box">
+    <div class="ld-icon">&#128202;</div>
+    <div class="ld-title">Cargando dashboard</div>
+    <div class="ld-msg" id="ld-msg">Conectando con Google Sheets&#8230;</div>
+    <div class="prog-bar"><div class="prog-fill" id="prog"></div></div>
+    <div class="ld-err" id="ld-err"></div>
+  </div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo">CP</div>
+    <div>
+      <div class="hdr-title">Chilepasajes &middot; Dashboard de Ventas</div>
+      <div class="hdr-sub">Solo Chilepasajes.cl &middot; <span id="hdr-range">&#8212;</span></div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button class="sync-btn" id="sync-btn" onclick="syncData()">
+      <span id="sync-icon">&#8635;</span> Actualizar datos
+    </button>
+    <span class="bdg" id="hdr-tx">&#8212;</span>
+    <span class="bdg" id="hdr-upd">&#8212;</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" onclick="goTab('resumen',this)">Resumen</button>
+  <button class="tab" onclick="goTab('medios',this)">Medios</button>
+  <button class="tab" onclick="goTab('empresas',this)">Empresas</button>
+  <button class="tab" onclick="goTab('rutas',this)">Rutas</button>
+  <button class="tab" onclick="goTab('dispositivos',this)">Dispositivos</button>
+  <button class="tab" onclick="goTab('campanas',this)">Campa&ntilde;as &amp; ROAS</button>
+</div>
+
+<div class="fbar">
+  <span class="flabel">Per&iacute;odo</span>
+  <button class="fb" onclick="setF('ayer',this)">Ayer</button>
+  <button class="fb on" onclick="setF('7d',this)">7 d&iacute;as</button>
+  <button class="fb" onclick="setF('14d',this)">14 d&iacute;as</button>
+  <button class="fb" onclick="setF('30d',this)">30 d&iacute;as</button>
+  <button class="fb" onclick="setF('todo',this)">Todo</button>
+  <button class="fb" onclick="setF('custom',this)">Personalizado</button>
+  <span class="range-lbl" id="range-lbl">&#8212;</span>
+  <div class="dprow" id="dprow">
+    <label>Desde</label><input type="date" id="dp-from">
+    <label>Hasta</label><input type="date" id="dp-to">
+    <button class="dp-ok" onclick="applyCustom()">Aplicar</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════ RESUMEN ═══════════ -->
+<div id="tab-resumen" class="sec on">
+  <div class="kgrid" id="kpi-res"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="ctitle">Utilidad diaria por medio</span>
+        <div class="leg">
+          <span><span class="ld" style="background:var(--tl)"></span>Org&aacute;nico</span>
+          <span><span class="ld" style="background:var(--bl)"></span>Google Ads</span>
+          <span><span class="ld" style="background:var(--am)"></span>Referidos</span>
+        </div>
+      </div>
+      <div class="cw" style="height:220px"><canvas id="ch-res-util"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Per&iacute;odo actual vs anterior</span></div>
+      <div id="res-cmp"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="ctitle">Venta diaria &mdash; actual vs per&iacute;odo anterior</span>
+      <div class="leg">
+        <span><span class="ld" style="background:var(--bl)"></span>Actual</span>
+        <span><span class="ld" style="background:#D1D5DB"></span>Anterior</span>
+      </div>
+    </div>
+    <div class="cw" style="height:180px"><canvas id="ch-res-cmp"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════ MEDIOS ═══════════ -->
+<div id="tab-medios" class="sec">
+  <div class="kgrid" id="kpi-med"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Distribuci&oacute;n utilidad por medio</span></div>
+      <div class="cw" style="height:210px"><canvas id="ch-med-donut"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Comparaci&oacute;n vs per&iacute;odo anterior</span></div>
+      <div id="med-cmp"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="ctitle">Evoluci&oacute;n diaria &mdash; utilidad por medio</span>
+      <div class="leg">
+        <span><span class="ld" style="background:var(--tl)"></span>Org&aacute;nico</span>
+        <span><span class="ld" style="background:var(--bl)"></span>Google Ads</span>
+        <span><span class="ld" style="background:var(--am)"></span>Referidos</span>
+      </div>
+    </div>
+    <div class="cw" style="height:220px"><canvas id="ch-med-line"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════ EMPRESAS ═══════════ -->
+<div id="tab-empresas" class="sec">
+  <div class="nota" style="background:var(--bl2);border-color:var(--bl3);color:#1E40AF">
+    Haz clic en cualquier columna para ordenar &middot; Filtra por medio con los botones
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn on" onclick="filterEmp('all',this)">Todos los medios</button>
+    <button class="btn" onclick="filterEmp('Organico',this)">Org&aacute;nico</button>
+    <button class="btn" onclick="filterEmp('Google Ads',this)">Google Ads</button>
+    <button class="btn" onclick="filterEmp('Referidos',this)">Referidos</button>
+  </div>
+  <div class="card" style="padding:0">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th onclick="sortEmp('nombre')">Empresa</th>
+          <th class="num" onclick="sortEmp('venta')">Venta</th>
+          <th class="num" onclick="sortEmp('comision')">Comisi&oacute;n</th>
+          <th class="num" onclick="sortEmp('sobreprecio')">Sobreprecio</th>
+          <th class="num" onclick="sortEmp('utilidad')">Utilidad &#8597;</th>
+          <th class="num" onclick="sortEmp('tx')">Trans.</th>
+          <th class="num" onclick="sortEmp('ticket')">Ticket prom.</th>
+          <th class="num" onclick="sortEmp('margen')">Margen</th>
+          <th>Mix origen</th>
+        </tr></thead>
+        <tbody id="emp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ RUTAS ═══════════ -->
+<div id="tab-rutas" class="sec">
+  <div class="kgrid" id="kpi-rutas"></div>
+
+  <!-- Barra de controles -->
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    <div style="display:flex;gap:0;border:1px solid var(--bd);border-radius:var(--r);overflow:hidden">
+      <button class="rv-btn" id="rv-top"   onclick="setRutaView('top',this)"   style="padding:6px 14px;border:none;background:var(--bl);color:#fff;font-size:12px;font-weight:600;cursor:pointer">Top rutas</button>
+      <button class="rv-btn" id="rv-emp"   onclick="setRutaView('emp',this)"   style="padding:6px 14px;border:none;background:var(--wh);color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;border-left:1px solid var(--bd)">Por empresa</button>
+      <button class="rv-btn" id="rv-tabla" onclick="setRutaView('tabla',this)" style="padding:6px 14px;border:none;background:var(--wh);color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;border-left:1px solid var(--bd)">Tabla detalle</button>
+    </div>
+    <select class="sel" id="ruta-sel"  onchange="renderRutas()"><option value="all">Todas las empresas</option></select>
+    <select class="sel" id="ruta-met" onchange="renderRutas()">
+      <option value="utilidad">Utilidad</option>
+      <option value="venta">Venta</option>
+      <option value="tx">Transacciones</option>
+    </select>
+    <input id="ruta-busq" type="text" placeholder="Buscar ruta&hellip;" oninput="renderRutas()"
+      style="padding:5px 12px;border:1px solid var(--bd);border-radius:20px;font-size:12px;color:var(--tx);background:var(--wh);outline:none;min-width:150px">
+    <span class="cnote" id="ruta-info" style="margin-left:auto"></span>
+  </div>
+
+  <!-- Vista 1: Top rutas -->
+  <div id="rv-top-panel">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="ctitle">Top 20 rutas</span>
+        <span class="cnote" id="ruta-met-lbl">por Utilidad</span>
+      </div>
+      <div class="cw" style="height:560px"><canvas id="ch-rutas-bar"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Vista 2: Por empresa -->
+  <div id="rv-emp-panel" style="display:none">
+    <div id="ruta-emp-cards"></div>
+  </div>
+
+  <!-- Vista 3: Tabla detalle -->
+  <div id="rv-tabla-panel" style="display:none">
+    <div class="card" style="padding:0">
+      <div class="card-hdr" style="padding:12px 16px 8px">
+        <span class="ctitle">Detalle rutas</span>
+        <span class="cnote" id="rutas-sub"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th onclick="sortRuta('ruta')">Ruta &#8597;</th>
+            <th onclick="sortRuta('empresa')">Empresa &#8597;</th>
+            <th class="num" onclick="sortRuta('venta')">Venta &#8597;</th>
+            <th class="num" onclick="sortRuta('utilidad')">Utilidad &#8597;</th>
+            <th class="num" onclick="sortRuta('tx')">Trans. &#8597;</th>
+            <th class="num" onclick="sortRuta('ticket')">Ticket prom. &#8597;</th>
+            <th class="num" onclick="sortRuta('margen')">Margen &#8597;</th>
+            <th>Popularidad</th>
+          </tr></thead>
+          <tbody id="rutas-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ DISPOSITIVOS ═══════════ -->
+<div id="tab-dispositivos" class="sec">
+  <div class="kgrid" id="kpi-disp"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Utilidad por dispositivo</span></div>
+      <div class="cw" style="height:220px"><canvas id="ch-disp-donut"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Transacciones por dispositivo</span></div>
+      <div class="cw" style="height:220px"><canvas id="ch-disp-tx"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="ctitle">Evoluci&oacute;n diaria por dispositivo</span>
+      <div class="leg">
+        <span><span class="ld" style="background:var(--bl)"></span>Celular</span>
+        <span><span class="ld" style="background:var(--pu)"></span>PC</span>
+        <span><span class="ld" style="background:var(--or)"></span>APP</span>
+      </div>
+    </div>
+    <div class="cw" style="height:200px"><canvas id="ch-disp-line"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════ CAMPAÑAS ═══════════ -->
+<div id="tab-campanas" class="sec">
+  <div class="nota">
+    <strong>ROAS real = Utilidad (comisi&oacute;n + sobreprecio) &divide; Inversi&oacute;n.</strong>
+    El valor de conversi&oacute;n en Google Ads refleja el precio del boleto completo, no la comisi&oacute;n de Chilepasajes.
+  </div>
+  <div class="kgrid" id="kpi-camp"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">ROAS diario</span><span class="cnote">Fuente: RESUMEN_DIARIO</span></div>
+      <div class="cw" style="height:220px"><canvas id="ch-roas-daily"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Net diario (Utilidad &minus; Inversi&oacute;n)</span></div>
+      <div class="cw" style="height:220px"><canvas id="ch-net-daily"></canvas></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">ROAS por campa&ntilde;a</span><span class="cnote">Umbral 1&times;</span></div>
+      <div class="cw" style="height:300px"><canvas id="ch-roas-camp"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="ctitle">Inversi&oacute;n por campa&ntilde;a</span></div>
+      <div id="camp-bars" style="padding:4px 0"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><span class="ctitle">Detalle de campa&ntilde;as</span></div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Campa&ntilde;a</th>
+        <th class="num">Inversi&oacute;n</th><th class="num">Utilidad GA4</th>
+        <th class="num">ROAS real</th><th class="num">Net</th><th>Estado</th>
+      </tr></thead><tbody id="camp-tbody"></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><span class="ctitle">Tr&aacute;fico diario &mdash; Clics y Sesiones</span></div>
+    <div class="cw" style="height:200px"><canvas id="ch-trafico"></canvas></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+<script>
+var SID  = '18AMPU0r1BzSY_-Mw_g2G4kzrISlYJXFMfx_GrJAXasQ';
+var RAW  = {md:[],emp:[],ruta:[],res:[],camp:[]};
+var ST   = {period:'7d',from:null,to:null,empMedio:'all',empSort:'utilidad',empDir:-1};
+var CH   = {};
+
+function clp(v){return '$\u00a0'+Math.round(v).toLocaleString('es-CL');}
+function n(v){return Math.round(v).toLocaleString('es-CL');}
+function dlbl(d){return d?d.getDate()+'/'+(d.getMonth()+1):'';}
+function dkey(d){return d?d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()):''; }
+function p2(x){return String(x).padStart(2,'0');}
+function addD(d,k){var r=new Date(d);r.setDate(r.getDate()+k);return r;}
+function diff(a,b){return Math.round((b-a)/86400000);}
+function rlbl(r){return r.from.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})+'\u2013'+r.to.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});}
+function setP(p,msg){
+  document.getElementById('prog').style.width=p+'%';
+  if(msg) document.getElementById('ld-msg').textContent=msg;
+}
+
+function fetchSheet(sheet){
+  return new Promise(function(resolve,reject){
+    var cbName='_gs_'+sheet.replace(/[^a-zA-Z0-9]/g,'_')+'_'+Date.now();
+    var timer=setTimeout(function(){delete window[cbName];reject(new Error('Timeout: hoja "'+sheet+'" no respondió.'));},15000);
+    window[cbName]=function(data){
+      clearTimeout(timer);delete window[cbName];
+      var sc=document.querySelector('script[data-cb="'+cbName+'"]');
+      if(sc) sc.parentNode.removeChild(sc);
+      if(!data||!data.table){reject(new Error('Sin datos en hoja "'+sheet+'"'));return;}
+      resolve(data.table);
+    };
+    var url='https://docs.google.com/spreadsheets/d/'+SID+
+            '/gviz/tq?tqx=out:json;responseHandler:'+cbName+'&sheet='+encodeURIComponent(sheet);
+    var sc=document.createElement('script');
+    sc.src=url;sc.dataset.cb=cbName;
+    sc.onerror=function(){clearTimeout(timer);delete window[cbName];
+      reject(new Error('No se pudo cargar "'+sheet+'". Verifica Compartir → Cualquier persona con el enlace → Lector.'));};
+    document.head.appendChild(sc);
+  });
+}
+
+function tableToRows(table){
+  if(!table||!table.cols||!table.rows) return [];
+  var cols=table.cols.map(function(c){return c.label||c.id||'';});
+  return table.rows.map(function(row){
+    var o={};
+    cols.forEach(function(c,i){
+      var cell=row.c&&row.c[i];
+      var v=(cell&&cell.v!==null&&cell.v!==undefined)?cell.v:'';
+      if(typeof v==='string'&&v.indexOf('Date(')===0){
+        var p=v.replace('Date(','').replace(')','').split(',');
+        v=new Date(+p[0],+p[1],+p[2]);o[c]=v;return;
+      }
+      o[c]=v;
+    });
+    return o;
+  });
+}
+
+function mkdV(v){
+  if(!v) return null;
+  if(v instanceof Date) return v;
+  var s=String(v).replace(/"/g,'').trim();
+  if(!s||s==='Fecha') return null;
+  var p=s.indexOf('/')>-1?s.split('/'):s.split('-');
+  if(p.length!==3) return null;
+  return s.indexOf('/')>-1?new Date(+p[2],+p[1]-1,+p[0]):new Date(+p[0],+p[1]-1,+p[2]);
+}
+function g(r,k){var v=r[k];return v===undefined||v===null||v===''?0:+v||0;}
+function gs(r,k){var v=r[k];return v===undefined||v===null?'':String(v).replace(/"/g,'').trim();}
+
+function syncData(){
+  var btn=document.getElementById('sync-btn'),icon=document.getElementById('sync-icon');
+  btn.classList.add('loading');icon.innerHTML='<span class="spin">↻</span>';
+  document.getElementById('lov').classList.remove('hidden');
+  document.getElementById('ld-err').style.display='none';
+  setP(5,'Descargando 5 hojas vía JSONP…');
+  Promise.all([
+    fetchSheet('VENTAS_MEDIO_DISP'),
+    fetchSheet('VENTAS_EMPRESA'),
+    fetchSheet('VENTAS_RUTA'),
+    fetchSheet('RESUMEN_DIARIO'),
+    fetchSheet('CAMPANAS_DIARIO')
+  ]).then(function(res){
+    setP(55,'Procesando VENTAS_MEDIO_DISP…');
+    RAW.md=tableToRows(res[0]).map(function(r){
+      return{date:mkdV(r['Fecha']||r['fecha']),medio:gs(r,'Medio')||'Organico',disp:gs(r,'Dispositivo'),
+             venta:g(r,'Venta'),comision:g(r,'Comision'),sobreprecio:g(r,'Sobreprecio'),
+             utilidad:g(r,'Utilidad'),tx:g(r,'Transacciones')};
+    }).filter(function(r){return r.date;});
+    setP(68,'Procesando VENTAS_EMPRESA…');
+    RAW.emp=tableToRows(res[1]).map(function(r){
+      return{date:mkdV(r['Fecha']||r['fecha']),empresa:gs(r,'Empresa'),medio:gs(r,'Medio')||'Organico',
+             venta:g(r,'Venta'),comision:g(r,'Comision'),sobreprecio:g(r,'Sobreprecio'),
+             utilidad:g(r,'Utilidad'),tx:g(r,'Transacciones')};
+    }).filter(function(r){return r.date&&r.empresa;});
+    setP(78,'Procesando VENTAS_RUTA…');
+    RAW.ruta=tableToRows(res[2]).map(function(r){
+      return{date:mkdV(r['Fecha']||r['fecha']),empresa:gs(r,'Empresa'),
+             ruta:(gs(r,'Origen')||'')+' → '+(gs(r,'Destino')||''),
+             venta:g(r,'Venta'),utilidad:g(r,'Utilidad'),tx:g(r,'Transacciones')};
+    }).filter(function(r){return r.date&&r.empresa;});
+    setP(86,'Procesando RESUMEN_DIARIO…');
+    RAW.res=tableToRows(res[3]).map(function(r){
+      return{date:mkdV(r['Fecha']||r['fecha']),inversion:g(r,'Inversion'),utilidad:g(r,'Utilidad'),
+             net:g(r,'Net'),clics:g(r,'Clics'),sesiones:g(r,'Sesiones'),roas:g(r,'ROAS')};
+    }).filter(function(r){return r.date;});
+    setP(92,'Procesando CAMPANAS_DIARIO…');
+    RAW.camp=tableToRows(res[4]).map(function(r){
+      var c=gs(r,'Campaña')||gs(r,'Campaign')||gs(r,'campana')||'';
+      if(!c){var keys=Object.keys(r);c=keys.length>1?gs(r,keys[1]):'';}
+      return{date:mkdV(r['Fecha']||r['fecha']),campana:c,
+             inversion:g(r,'Inversion'),utilidad:g(r,'Utilidad'),estado:gs(r,'Estado')};
+    }).filter(function(r){return r.date&&r.campana&&r.campana!=='Campaña'&&r.campana!=='Campaign';});
+    setP(97,'Construyendo visualizaciones…');
+    var totTx=RAW.md.reduce(function(a,r){return a+r.tx;},0);
+    document.getElementById('hdr-tx').textContent=totTx.toLocaleString('es-CL')+' transacciones';
+    document.getElementById('hdr-upd').textContent='Actualizado '+new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    populateEmpSel();
+    renderAll();
+    setP(100,'¡Listo!');
+  }).catch(function(e){
+    var el=document.getElementById('ld-err');
+    el.style.display='block';el.textContent='⚠ '+e.message;console.error(e);
+  }).finally(function(){
+    btn.classList.remove('loading');icon.textContent='↻';
+    setTimeout(function(){document.getElementById('lov').classList.add('hidden');},700);
+  });
+}
+
+function getRange(){
+  var all=RAW.md.map(function(r){return r.date;}).filter(Boolean);
+  if(!all.length) return{from:new Date(0),to:new Date()};
+  var maxD=new Date(Math.max.apply(null,all)),minD=new Date(Math.min.apply(null,all));
+  if(ST.period==='custom'&&ST.from&&ST.to) return{from:ST.from,to:ST.to};
+  if(ST.period==='todo') return{from:minD,to:maxD};
+  if(ST.period==='ayer'){var d=addD(maxD,-1);return{from:d,to:d};}
+  var days=ST.period==='7d'?7:ST.period==='14d'?14:30;
+  return{from:addD(maxD,-(days-1)),to:maxD};
+}
+function fR(arr,rng){
+  var f=rng.from.getTime(),t=rng.to.getTime()+86399999;
+  return arr.filter(function(r){return r.date&&r.date.getTime()>=f&&r.date.getTime()<=t;});
+}
+function prev(rng){var d=diff(rng.from,rng.to)+1;return{from:addD(rng.from,-d),to:addD(rng.from,-1)};}
+
+function renderAll(){
+  var rng=getRange(),lbl=rlbl(rng);
+  document.getElementById('hdr-range').textContent=lbl;
+  document.getElementById('range-lbl').textContent=lbl;
+  renderResumen(rng);renderMedios(rng);renderEmpresas(rng);
+  renderRutas();renderDispositivos(rng);renderCampanas(rng);
+}
+
+function renderResumen(rng){
+  var cur=fR(RAW.md,rng),prv=fR(RAW.md,prev(rng)),res=fR(RAW.res,rng);
+  function sm(a){return a.reduce(function(t,r){return{v:t.v+r.venta,u:t.u+r.utilidad,c:t.c+r.comision,s:t.s+r.sobreprecio,tx:t.tx+r.tx};},{v:0,u:0,c:0,s:0,tx:0});}
+  var C=sm(cur),P=sm(prv);
+  var inv=res.reduce(function(a,r){return a+r.inversion;},0);
+  var net=C.u-inv,roas=inv?C.u/inv:0;
+  function dt(cv,pv){
+    if(!pv) return '<span class="dt nt">—</span>';
+    var d=((cv-pv)/pv)*100;
+    return '<span class="dt '+(d>=0?'up':'dn')+'">'+(d>=0?'▲':'▼')+' '+Math.abs(d).toFixed(1)+'%</span>';
+  }
+  document.getElementById('kpi-res').innerHTML=[
+    {l:'Venta total',v:clp(C.v),s:dt(C.v,P.v)},{l:'Utilidad',v:clp(C.u),s:dt(C.u,P.u)},
+    {l:'Comisión',v:clp(C.c),s:''},{l:'Sobreprecio',v:clp(C.s),s:''},
+    {l:'Transacciones',v:n(C.tx),s:dt(C.tx,P.tx)},{l:'Ticket prom.',v:C.tx?clp(C.v/C.tx):'—',s:''},
+    {l:'Inversión Ads',v:clp(inv),s:''},
+    {l:'Net (Util−Inv)',v:clp(net),s:'<span class="dt '+(net>=0?'up':'dn')+'">'+(net>=0?'▲':'▼')+'</span>'},
+    {l:'ROAS real',v:roas?roas.toFixed(2)+'×':'—',s:''}
+  ].map(function(k){return '<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div>'+(k.s?'<div class="kft">'+k.s+'</div>':'')+'</div>';}).join('');
+  var days=buildDM(cur,rng);
+  mkChart('ch-res-util','bar',days.map(function(d){return d.lbl;}),
+    [{label:'Orgánico',data:days.map(function(d){return d.uOrg;}),backgroundColor:'rgba(13,148,136,.72)',stack:'a'},
+     {label:'Google Ads',data:days.map(function(d){return d.uAds;}),backgroundColor:'rgba(37,99,235,.72)',stack:'a'},
+     {label:'Referidos',data:days.map(function(d){return d.uRef;}),backgroundColor:'rgba(217,119,6,.72)',stack:'a'}],
+    {stacked:true,yFmt:clp});
+  var pd=buildDM(fR(RAW.md,prev(rng)),prev(rng));
+  var iL=Array.from({length:Math.max(days.length,pd.length)},function(_,i){return 'Día '+(i+1);});
+  mkChart('ch-res-cmp','line',iL,
+    [{label:'Actual',data:days.map(function(d){return d.venta;}),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.07)',fill:true,tension:.3},
+     {label:'Anterior',data:pd.map(function(d){return d.venta;}),borderColor:'#D1D5DB',borderDash:[4,3],backgroundColor:'transparent',tension:.3}],
+    {yFmt:clp});
+  var metrics=[
+    {n:'Venta total',c:C.v,p:P.v,f:clp},{n:'Utilidad',c:C.u,p:P.u,f:clp},
+    {n:'Comisión',c:C.c,p:P.c,f:clp},{n:'Sobreprecio',c:C.s,p:P.s,f:clp},
+    {n:'Transacciones',c:C.tx,p:P.tx,f:n},{n:'Ticket prom.',c:C.tx?C.v/C.tx:0,p:P.tx?P.v/P.tx:0,f:clp}
+  ];
+  document.getElementById('res-cmp').innerHTML='<div class="cmp-grid" style="grid-template-columns:1.3fr 1fr 1fr">'+
+    '<div class="cmp-cell cmp-hd">Métrica</div><div class="cmp-cell cmp-hd">Actual</div><div class="cmp-cell cmp-hd">Ant. ('+rlbl(prev(rng))+')</div>'+
+    metrics.map(function(m){var d=m.p?((m.c-m.p)/m.p)*100:0;
+      return'<div class="cmp-cell" style="font-weight:600">'+m.n+'</div>'+
+             '<div class="cmp-cell">'+m.f(m.c)+(m.p?' <span class="dt '+(d>=0?'up':'dn')+'" style="font-size:10px">'+(d>=0?'▲':'▼')+' '+Math.abs(d).toFixed(1)+'%</span>':'')+'</div>'+
+             '<div class="cmp-cell" style="color:var(--tx3)">'+m.f(m.p)+'</div>';
+    }).join('')+'</div>';
+}
+
+function renderMedios(rng){
+  var cur=fR(RAW.md,rng),prv=fR(RAW.md,prev(rng));
+  var M=[{k:'Organico',l:'Orgánico',c:'#0D9488'},{k:'Google Ads',l:'Google Ads',c:'#2563EB'},{k:'Referidos',l:'Referidos',c:'#D97706'}];
+  function ms(arr,k){return arr.filter(function(r){return r.medio===k;}).reduce(function(a,r){return{u:a.u+r.utilidad,v:a.v+r.venta,tx:a.tx+r.tx};},{u:0,v:0,tx:0});}
+  var cM=M.map(function(m){return{k:m.k,l:m.l,c:m.c,cur:ms(cur,m.k),prv:ms(prv,m.k)};});
+  var totU=cM.reduce(function(a,x){return a+x.cur.u;},0);
+  document.getElementById('kpi-med').innerHTML=cM.map(function(x){
+    var d=x.prv.u?((x.cur.u-x.prv.u)/x.prv.u)*100:0;
+    return'<div class="kcard"><div class="klbl" style="color:'+x.c+'">'+x.l+'</div><div class="kval">'+clp(x.cur.u)+'</div>'+
+           '<div class="kft"><span class="dt '+(d>=0?'up':'dn')+'">'+(d>=0?'▲':'▼')+' '+Math.abs(d).toFixed(1)+'%</span>'+
+           '<span class="ksub">'+n(x.cur.tx)+' tx · '+(totU?((x.cur.u/totU)*100).toFixed(1):'0')+'%</span></div></div>';
+  }).join('');
+  mkChart('ch-med-donut','doughnut',cM.map(function(x){return x.l;}),
+    [{data:cM.map(function(x){return x.cur.u;}),backgroundColor:['#0D9488','#2563EB','#D97706'],borderWidth:2}],{});
+  var days=buildDM(cur,rng);
+  mkChart('ch-med-line','line',days.map(function(d){return d.lbl;}),
+    cM.map(function(m){return{label:m.l,data:days.map(function(d){return m.k==='Organico'?d.uOrg:m.k==='Google Ads'?d.uAds:d.uRef;}),borderColor:m.c,backgroundColor:m.c+'18',fill:true,tension:.3};}),{yFmt:clp});
+  document.getElementById('med-cmp').innerHTML='<div class="cmp-grid" style="grid-template-columns:1fr 1fr 1fr 0.8fr">'+
+    '<div class="cmp-cell cmp-hd">Medio</div><div class="cmp-cell cmp-hd">Actual</div><div class="cmp-cell cmp-hd">Ant.</div><div class="cmp-cell cmp-hd">Var.</div>'+
+    cM.map(function(x){var d=x.prv.u?((x.cur.u-x.prv.u)/x.prv.u)*100:0;
+      return'<div class="cmp-cell" style="font-weight:600">'+x.l+'</div><div class="cmp-cell">'+clp(x.cur.u)+'</div>'+
+             '<div class="cmp-cell" style="color:var(--tx3)">'+clp(x.prv.u)+'</div>'+
+             '<div class="cmp-cell"><span class="dt '+(d>=0?'up':'dn')+'">'+(d>=0?'▲':'▼')+' '+Math.abs(d).toFixed(1)+'%</span></div>';
+    }).join('')+'</div>';
+}
+
+var EMP_DATA=[];
+function renderEmpresas(rng){
+  if(!rng) rng=getRange();
+  var cur=fR(RAW.emp,rng);
+  var flt=ST.empMedio==='all'?cur:cur.filter(function(r){return r.medio===ST.empMedio;});
+  var map={};
+  flt.forEach(function(r){
+    if(!r.empresa) return;
+    if(!map[r.empresa]) map[r.empresa]={nombre:r.empresa,venta:0,comision:0,sobreprecio:0,utilidad:0,tx:0,org:0,ads:0,ref:0};
+    var e=map[r.empresa];
+    e.venta+=r.venta;e.comision+=r.comision;e.sobreprecio+=r.sobreprecio;e.utilidad+=r.utilidad;e.tx+=r.tx;
+    if(r.medio==='Organico') e.org+=r.tx;
+    else if(r.medio==='Google Ads') e.ads+=r.tx;
+    else e.ref+=r.tx;
+  });
+  EMP_DATA=Object.values(map).map(function(e){return Object.assign({},e,{ticket:e.tx?e.venta/e.tx:0,margen:e.venta?e.utilidad/e.venta:0});});
+  renderEmpTable();
+}
+function renderEmpTable(){
+  EMP_DATA.sort(function(a,b){
+    var av=typeof a[ST.empSort]==='string'?a[ST.empSort].toLowerCase():a[ST.empSort];
+    var bv=typeof b[ST.empSort]==='string'?b[ST.empSort].toLowerCase():b[ST.empSort];
+    return av<bv?ST.empDir:av>bv?-ST.empDir:0;
+  });
+  document.getElementById('emp-tbody').innerHTML=EMP_DATA.map(function(e){
+    var tot=e.org+e.ads+e.ref||1;
+    var po=(e.org/tot*100).toFixed(0),pa=(e.ads/tot*100).toFixed(0),pr=(e.ref/tot*100).toFixed(0);
+    return'<tr><td><strong>'+e.nombre+'</strong></td>'+
+      '<td class="num">'+clp(e.venta)+'</td><td class="num">'+clp(e.comision)+'</td>'+
+      '<td class="num">'+clp(e.sobreprecio)+'</td><td class="num">'+clp(e.utilidad)+'</td>'+
+      '<td class="num">'+n(e.tx)+'</td><td class="num">'+clp(e.ticket)+'</td>'+
+      '<td class="num">'+((e.margen||0)*100).toFixed(1)+'%</td>'+
+      '<td><div class="cbar-wrap">'+
+        '<div style="width:'+po+'%;background:#0D9488"></div>'+
+        '<div style="width:'+pa+'%;background:#2563EB"></div>'+
+        '<div style="width:'+pr+'%;background:#D97706"></div>'+
+      '</div><div style="font-size:10px;color:var(--tx3);margin-top:3px">'+po+'% org · '+pa+'% ads · '+pr+'% ref</div></td></tr>';
+  }).join('');
+}
+function filterEmp(m,btn){
+  ST.empMedio=m;
+  document.querySelectorAll('#tab-empresas .btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');renderEmpresas();
+}
+function sortEmp(col){
+  if(ST.empSort===col) ST.empDir*=-1;else{ST.empSort=col;ST.empDir=-1;}
+  renderEmpTable();
+}
+
+/* ═══════════ RUTAS ═══════════ */
+var RUTAS_DATA=[];
+var RUTA_SORT={col:'utilidad',dir:-1};
+var RUTA_VIEW='top';
+var EMP_COLORS={};
+var EMP_PAL=['#2563EB','#0D9488','#D97706','#7C3AED','#EA580C','#059669','#DC2626','#0891B2','#65A30D','#DB2777'];
+var EMP_OPEN={};
+
+function getEmpColor(emp){
+  if(!EMP_COLORS[emp]){var k=Object.keys(EMP_COLORS).length;EMP_COLORS[emp]=EMP_PAL[k%EMP_PAL.length];}
+  return EMP_COLORS[emp];
+}
+
+function setRutaView(v,btn){
+  RUTA_VIEW=v;
+  ['top','emp','tabla'].forEach(function(x){
+    document.getElementById('rv-'+x+'-panel').style.display=x===v?'block':'none';
+    var b=document.getElementById('rv-'+x);
+    b.style.background=x===v?'var(--bl)':'var(--wh)';
+    b.style.color=x===v?'#fff':'var(--tx2)';
+  });
+  renderRutas();
+}
+
+function populateEmpSel(){
+  var sel=document.getElementById('ruta-sel');
+  var emps=[...new Set(RAW.ruta.map(function(r){return r.empresa;}).filter(Boolean))].sort();
+  sel.innerHTML='<option value="all">Todas las empresas</option>'+
+    emps.map(function(e){return'<option value="'+e+'">'+e+'</option>';}).join('');
+  EMP_COLORS={};
+  emps.forEach(function(e,i){EMP_COLORS[e]=EMP_PAL[i%EMP_PAL.length];});
+}
+
+function renderRutas(){
+  var rng=getRange(),cur=fR(RAW.ruta,rng);
+  var emp=document.getElementById('ruta-sel').value;
+  var met=document.getElementById('ruta-met').value;
+  var busq=(document.getElementById('ruta-busq').value||'').toLowerCase();
+  var flt=emp==='all'?cur:cur.filter(function(r){return r.empresa===emp;});
+  var map={};
+  flt.forEach(function(r){
+    var k=r.ruta+'||'+r.empresa;
+    if(!map[k]) map[k]={ruta:r.ruta,empresa:r.empresa,venta:0,utilidad:0,tx:0};
+    map[k].venta+=r.venta;map[k].utilidad+=r.utilidad;map[k].tx+=r.tx;
+  });
+  RUTAS_DATA=Object.values(map).map(function(r){
+    return Object.assign({},r,{ticket:r.tx?r.venta/r.tx:0,margen:r.venta?r.utilidad/r.venta:0});
+  });
+  var totU=RUTAS_DATA.reduce(function(a,r){return a+r.utilidad;},0);
+  var totTx=RUTAS_DATA.reduce(function(a,r){return a+r.tx;},0);
+  var filtered=busq?RUTAS_DATA.filter(function(r){return r.ruta.toLowerCase().indexOf(busq)>-1||r.empresa.toLowerCase().indexOf(busq)>-1;}):RUTAS_DATA;
+  var sorted=filtered.slice().sort(function(a,b){return b[met]-a[met];});
+  var top1=sorted[0];
+  document.getElementById('ruta-info').textContent=sorted.length+' rutas · '+n(totTx)+' tx';
+  document.getElementById('kpi-rutas').innerHTML=
+    '<div class="kcard"><div class="klbl">Rutas únicas</div><div class="kval">'+n(RUTAS_DATA.length)+'</div></div>'+
+    '<div class="kcard"><div class="klbl">Transacciones</div><div class="kval">'+n(totTx)+'</div></div>'+
+    '<div class="kcard"><div class="klbl">Utilidad total</div><div class="kval" style="font-size:17px">'+clp(totU)+'</div></div>'+
+    (top1?'<div class="kcard"><div class="klbl">Ruta #1</div><div class="kval" style="font-size:13px;line-height:1.3">'+top1.ruta+'</div><div class="kft"><span class="ksub">'+clp(top1[met])+' · '+top1.empresa+'</span></div></div>':'')+
+    '<div class="kcard"><div class="klbl">Ticket prom.</div><div class="kval" style="font-size:17px">'+clp(totTx?flt.reduce(function(a,r){return a+r.venta;},0)/totTx:0)+'</div></div>';
+  var metLbls={utilidad:'por Utilidad',venta:'por Venta',tx:'por Transacciones'};
+  var metEl=document.getElementById('ruta-met-lbl');if(metEl) metEl.textContent=metLbls[met];
+  if(RUTA_VIEW==='top') renderRutasTop(sorted,met);
+  else if(RUTA_VIEW==='emp') renderRutasEmp(met,busq);
+  else renderRutaTable(sorted);
+}
+
+/* Vista 1 — Top barras */
+function renderRutasTop(sorted,met){
+  var top20=sorted.slice(0,20);
+  mkChart('ch-rutas-bar','bar',
+    top20.map(function(r){return r.ruta.length>30?r.ruta.substring(0,28)+'\u2026':r.ruta;}),
+    [{label:'',data:top20.map(function(r){return r[met];}),
+      backgroundColor:top20.map(function(r){return getEmpColor(r.empresa)+'CC';}),
+      borderColor:top20.map(function(r){return getEmpColor(r.empresa);}),
+      borderWidth:1,borderRadius:3}],
+    {horizontal:true,yFmt:met==='tx'?n:clp});
+}
+
+/* Vista 2 — Por empresa (tarjetas colapsables) */
+function renderRutasEmp(met,busq){
+  var empMap={};
+  var data=busq?RUTAS_DATA.filter(function(r){return r.ruta.toLowerCase().indexOf(busq)>-1||r.empresa.toLowerCase().indexOf(busq)>-1;}):RUTAS_DATA;
+  data.forEach(function(r){
+    if(!empMap[r.empresa]) empMap[r.empresa]={emp:r.empresa,rutas:[],utilidad:0,venta:0,tx:0};
+    empMap[r.empresa].rutas.push(r);
+    empMap[r.empresa].utilidad+=r.utilidad;
+    empMap[r.empresa].venta+=r.venta;
+    empMap[r.empresa].tx+=r.tx;
+  });
+  var emps=Object.values(empMap).sort(function(a,b){return b.utilidad-a.utilidad;});
+  emps.forEach(function(e,i){if(EMP_OPEN[e.emp]===undefined) EMP_OPEN[e.emp]=(i<2);});
+  var metFmt={utilidad:clp,venta:clp,tx:n};
+  var metLabel={utilidad:'Utilidad',venta:'Venta',tx:'Transacciones'};
+  var html='';
+  emps.forEach(function(e){
+    var c=getEmpColor(e.emp);
+    var isOpen=!!EMP_OPEN[e.emp];
+    var rutasSorted=e.rutas.slice().sort(function(a,b){return b[met]-a[met];});
+    var top6=rutasSorted.slice(0,6);
+    var maxVal=top6.length?Math.max.apply(null,top6.map(function(r){return r[met];})):1;
+    html+='<div class="card" style="padding:0;margin-bottom:8px">'+
+      '<div onclick="toggleEmpCard(\''+e.emp.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none">'+
+        '<div style="width:11px;height:11px;border-radius:3px;background:'+c+';flex-shrink:0"></div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-weight:700;font-size:13px;color:var(--tx)">'+e.emp+'</div>'+
+          '<div style="font-size:11px;color:var(--tx3);margin-top:1px">'+e.rutas.length+' rutas · '+n(e.tx)+' tx</div>'+
+        '</div>'+
+        '<div style="text-align:right;margin-right:10px">'+
+          '<div style="font-size:16px;font-weight:700;color:'+c+'">'+metFmt[met](e[met])+'</div>'+
+          '<div style="font-size:10px;color:var(--tx3)">'+metLabel[met]+'</div>'+
+        '</div>'+
+        '<div id="arrow-'+encodeURIComponent(e.emp)+'" style="font-size:14px;color:var(--tx3);transition:transform .2s;transform:'+(isOpen?'rotate(180deg)':'rotate(0deg)')+'">&#9660;</div>'+
+      '</div>'+
+      '<div id="body-'+encodeURIComponent(e.emp)+'" style="display:'+(isOpen?'block':'none')+';padding:0 16px 12px;border-top:1px solid var(--bd)">'+
+        top6.map(function(r){
+          var barW=maxVal?((r[met]/maxVal)*100).toFixed(1):0;
+          var secTxt='';
+          if(met==='utilidad') secTxt=n(r.tx)+' tx · '+(r.venta?((r.utilidad/r.venta)*100).toFixed(1):'0')+'% margen';
+          else if(met==='venta') secTxt='Util: '+clp(r.utilidad)+' · '+n(r.tx)+' tx';
+          else secTxt=clp(r.ticket)+' ticket prom.';
+          return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+            '<div style="flex:0 0 185px;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.ruta+'">'+r.ruta+'</div>'+
+            '<div style="flex:1;height:7px;background:var(--gr2);border-radius:4px"><div style="width:'+barW+'%;height:7px;background:'+c+';border-radius:4px"></div></div>'+
+            '<div style="text-align:right;min-width:75px">'+
+              '<div style="font-size:12px;font-weight:700">'+metFmt[met](r[met])+'</div>'+
+              '<div style="font-size:10px;color:var(--tx3)">'+secTxt+'</div>'+
+            '</div>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('ruta-emp-cards').innerHTML=html||'<div class="cnote" style="padding:20px">Sin datos para el período seleccionado.</div>';
+}
+
+function toggleEmpCard(emp){
+  EMP_OPEN[emp]=!EMP_OPEN[emp];
+  var key=encodeURIComponent(emp);
+  var body=document.getElementById('body-'+key);
+  var arrow=document.getElementById('arrow-'+key);
+  if(body) body.style.display=EMP_OPEN[emp]?'block':'none';
+  if(arrow) arrow.style.transform=EMP_OPEN[emp]?'rotate(180deg)':'rotate(0deg)';
+}
+
+/* Vista 3 — Tabla */
+function renderRutaTable(sorted){
+  var sub=document.getElementById('rutas-sub');
+  if(sub) sub.textContent='Mostrando '+Math.min(sorted.length,100)+' de '+sorted.length+' rutas';
+  var maxTx=sorted.length?sorted.reduce(function(a,r){return Math.max(a,r.tx);},0):1;
+  document.getElementById('rutas-tbody').innerHTML=sorted.slice(0,100).map(function(r){
+    var c=getEmpColor(r.empresa);
+    return'<tr>'+
+      '<td><strong style="font-size:12px">'+r.ruta+'</strong></td>'+
+      '<td><span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:'+c+'18;color:'+c+'">'+r.empresa+'</span></td>'+
+      '<td class="num">'+clp(r.venta)+'</td>'+
+      '<td class="num"><strong>'+clp(r.utilidad)+'</strong></td>'+
+      '<td class="num">'+n(r.tx)+'</td>'+
+      '<td class="num">'+clp(r.ticket)+'</td>'+
+      '<td class="num">'+((r.margen||0)*100).toFixed(1)+'%</td>'+
+      '<td style="min-width:90px"><div style="height:6px;background:#E5E7EB;border-radius:3px"><div style="width:'+((r.tx/maxTx)*100).toFixed(0)+'%;height:6px;background:'+c+';border-radius:3px"></div></div>'+
+      '<div style="font-size:10px;color:var(--tx3);margin-top:2px">'+n(r.tx)+' tx</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function sortRuta(col){
+  if(RUTA_SORT.col===col) RUTA_SORT.dir*=-1;else{RUTA_SORT.col=col;RUTA_SORT.dir=-1;}
+  var busq=(document.getElementById('ruta-busq').value||'').toLowerCase();
+  var filtered=busq?RUTAS_DATA.filter(function(r){return r.ruta.toLowerCase().indexOf(busq)>-1||r.empresa.toLowerCase().indexOf(busq)>-1;}):RUTAS_DATA;
+  var sorted=filtered.slice().sort(function(a,b){
+    var av=typeof a[RUTA_SORT.col]==='string'?a[RUTA_SORT.col].toLowerCase():a[RUTA_SORT.col];
+    var bv=typeof b[RUTA_SORT.col]==='string'?b[RUTA_SORT.col].toLowerCase():b[RUTA_SORT.col];
+    return av<bv?RUTA_SORT.dir:av>bv?-RUTA_SORT.dir:0;
+  });
+  renderRutaTable(sorted);
+}
+
+/* ═══════════ DISPOSITIVOS ═══════════ */
+function renderDispositivos(rng){
+  var cur=fR(RAW.md,rng);
+  var D=[{k:'Celular',c:'#2563EB'},{k:'PC',c:'#7C3AED'},{k:'APP',c:'#EA580C'}];
+  function ds(k){return cur.filter(function(r){return r.disp===k;}).reduce(function(a,r){return{u:a.u+r.utilidad,tx:a.tx+r.tx};},{u:0,tx:0});}
+  var dD=D.map(function(d){return Object.assign({},d,{s:ds(d.k)});});
+  var totU=dD.reduce(function(a,x){return a+x.s.u;},0);
+  document.getElementById('kpi-disp').innerHTML=dD.map(function(x){
+    return'<div class="kcard"><div class="klbl" style="color:'+x.c+'">'+x.k+'</div><div class="kval">'+clp(x.s.u)+'</div>'+
+           '<div class="kft"><span class="ksub">'+n(x.s.tx)+' tx · '+(totU?((x.s.u/totU)*100).toFixed(1):'0')+'%</span></div></div>';
+  }).join('');
+  mkChart('ch-disp-donut','doughnut',D.map(function(d){return d.k;}),
+    [{data:dD.map(function(x){return x.s.u;}),backgroundColor:['#2563EB','#7C3AED','#EA580C'],borderWidth:2}],{});
+  mkChart('ch-disp-tx','doughnut',D.map(function(d){return d.k;}),
+    [{data:dD.map(function(x){return x.s.tx;}),backgroundColor:['#2563EB','#7C3AED','#EA580C'],borderWidth:2}],{});
+  var days=buildDM(cur,rng);
+  mkChart('ch-disp-line','line',days.map(function(d){return d.lbl;}),
+    D.map(function(x){return{label:x.k,data:days.map(function(d){return d['u'+x.k]||0;}),borderColor:x.c,backgroundColor:x.c+'18',fill:true,tension:.3};}),{yFmt:clp});
+}
+
+/* ═══════════ CAMPAÑAS ═══════════ */
+function renderCampanas(rng){
+  var res=fR(RAW.res,rng),camp=fR(RAW.camp,rng);
+  var inv=res.reduce(function(a,r){return a+r.inversion;},0);
+  var util=res.reduce(function(a,r){return a+r.utilidad;},0);
+  var net=res.reduce(function(a,r){return a+r.net;},0);
+  var clics=res.reduce(function(a,r){return a+r.clics;},0);
+  var ses=res.reduce(function(a,r){return a+r.sesiones;},0);
+  var roas=inv?util/inv:0;
+  document.getElementById('kpi-camp').innerHTML=[
+    {l:'Inversión total',v:clp(inv)},{l:'Utilidad (GA4)',v:clp(util)},
+    {l:'Net (Util−Inv)',v:clp(net)},{l:'ROAS real',v:roas.toFixed(2)+'×'},
+    {l:'Clics totales',v:n(clics)},{l:'Sesiones',v:n(ses)}
+  ].map(function(k){return'<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div></div>';}).join('');
+  mkChart('ch-roas-daily','line',res.map(function(r){return dlbl(r.date);}),
+    [{label:'ROAS',data:res.map(function(r){return r.roas;}),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.3}],
+    {yFmt:function(v){return v.toFixed(1)+'×';}});
+  mkChart('ch-net-daily','bar',res.map(function(r){return dlbl(r.date);}),
+    [{label:'Net',data:res.map(function(r){return r.net;}),
+      backgroundColor:res.map(function(r){return r.net>=0?'rgba(5,150,105,.72)':'rgba(220,38,38,.65)';}),borderRadius:4}],{yFmt:clp});
+  var cMap={};
+  camp.forEach(function(r){
+    if(!r.campana) return;
+    if(!cMap[r.campana]) cMap[r.campana]={campana:r.campana,inv:0,util:0,estados:[]};
+    cMap[r.campana].inv+=r.inversion;cMap[r.campana].util+=r.utilidad;
+    if(r.estado) cMap[r.campana].estados.push(r.estado);
+  });
+  var camps=Object.values(cMap).sort(function(a,b){return b.inv-a.inv;});
+  var cR=camps.map(function(c){return{name:c.campana.replace('CLP-',''),roas:c.inv?c.util/c.inv:0};}).sort(function(a,b){return b.roas-a.roas;});
+  mkChart('ch-roas-camp','bar',cR.map(function(c){return c.name;}),
+    [{label:'ROAS',data:cR.map(function(c){return c.roas;}),
+      backgroundColor:cR.map(function(c){return c.roas>=1?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)';}),borderRadius:4}],
+    {yFmt:function(v){return v.toFixed(2)+'×';}});
+  var maxI=camps.length?camps[0].inv:1;
+  document.getElementById('camp-bars').innerHTML=camps.map(function(c){
+    var r=c.inv?c.util/c.inv:0;
+    return'<div class="rbar"><div class="rname" title="'+c.campana+'">'+c.campana.replace('CLP-','')+'</div>'+
+           '<div class="rtrack"><div class="rfill" style="width:'+((c.inv/maxI)*100).toFixed(1)+'%;background:var(--bl)"></div></div>'+
+           '<div class="rvals"><div class="rv1">'+clp(c.inv)+'</div><div class="rv2">ROAS: '+(c.inv?r.toFixed(2)+'×':'—')+'</div></div></div>';
+  }).join('');
+  document.getElementById('camp-tbody').innerHTML=camps.map(function(c){
+    var r=c.inv?c.util/c.inv:0,net2=c.util-c.inv;
+    var est=c.estados.length?c.estados[c.estados.length-1]:'—';
+    return'<tr><td><strong>'+c.campana+'</strong></td><td class="num">'+clp(c.inv)+'</td>'+
+      '<td class="num">'+clp(c.util)+'</td><td class="num"><strong>'+r.toFixed(2)+'×</strong></td>'+
+      '<td class="num" style="color:'+(net2>=0?'var(--gn)':'var(--rd)')+'">'+(net2>=0?'+':'')+clp(net2)+'</td>'+
+      '<td><span class="tag '+(est==='apta'?'tg':est==='limitada'?'tw':'tb')+'">'+est+'</span></td></tr>';
+  }).join('');
+  mkChart('ch-trafico','line',res.map(function(r){return dlbl(r.date);}),
+    [{label:'Clics',data:res.map(function(r){return r.clics;}),borderColor:'#2563EB',tension:.3},
+     {label:'Sesiones',data:res.map(function(r){return r.sesiones;}),borderColor:'#0D9488',tension:.3}],{yFmt:n});
+}
+
+function buildDM(arr,rng){
+  var map={};
+  arr.forEach(function(r){
+    if(!r.date) return;
+    var k=dkey(r.date);
+    if(!map[k]) map[k]={lbl:dlbl(r.date),venta:0,utilidad:0,tx:0,uOrg:0,uAds:0,uRef:0,uCelular:0,uPC:0,uAPP:0};
+    var d=map[k];
+    d.venta+=r.venta;d.utilidad+=r.utilidad;d.tx+=r.tx||1;
+    if(r.medio==='Organico') d.uOrg+=r.utilidad;
+    else if(r.medio==='Google Ads') d.uAds+=r.utilidad;
+    else if(r.medio==='Referidos') d.uRef+=r.utilidad;
+    if(r.disp==='Celular') d.uCelular+=r.utilidad;
+    else if(r.disp==='PC') d.uPC+=r.utilidad;
+    else if(r.disp==='APP') d.uAPP+=r.utilidad;
+  });
+  var out=[],d=new Date(rng.from);
+  while(d<=rng.to){
+    var k=dkey(d);
+    out.push(map[k]||{lbl:dlbl(new Date(d)),venta:0,utilidad:0,tx:0,uOrg:0,uAds:0,uRef:0,uCelular:0,uPC:0,uAPP:0});
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+function mkChart(id,type,labels,datasets,opts){
+  opts=opts||{};
+  if(CH[id]){CH[id].destroy();delete CH[id];}
+  var el=document.getElementById(id);if(!el) return;
+  var isH=!!opts.horizontal;
+  CH[id]=new Chart(el,{
+    type:type,data:{labels:labels,datasets:datasets},
+    options:{
+      indexAxis:isH?'y':'x',responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:type==='doughnut',position:'bottom',labels:{font:{size:11},padding:12,boxWidth:12}},
+        tooltip:{callbacks:{label:function(ctx){
+          var v=isH?(ctx.parsed.x!==undefined?ctx.parsed.x:ctx.raw):(ctx.parsed.y!==undefined?ctx.parsed.y:ctx.raw);
+          return' '+(opts.yFmt?opts.yFmt(v):n(v));
+        }}}
+      },
+      scales:type==='doughnut'?{}:{
+        x:{stacked:!!opts.stacked,grid:{display:!isH,color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},color:'#9CA3AF',maxRotation:45}},
+        y:{stacked:!!opts.stacked,grid:{display:isH,color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},color:'#9CA3AF',callback:function(v){
+          if(opts.yFmt) return opts.yFmt(v);
+          return v>=1000000?'$'+(v/1000000).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'k':v;
+        }}}
+      },
+      animation:{duration:350}
+    }
+  });
+}
+
+function setF(p,btn){
+  ST.period=p;
+  document.querySelectorAll('.fbar .fb').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('dprow').classList[p==='custom'?'add':'remove']('show');
+  if(p!=='custom'&&RAW.md.length) renderAll();
+}
+function applyCustom(){
+  var f=document.getElementById('dp-from').value,t=document.getElementById('dp-to').value;
+  if(!f||!t) return;
+  var fp=f.split('-');ST.from=new Date(+fp[0],+fp[1]-1,+fp[2]);
+  var tp=t.split('-');ST.to=new Date(+tp[0],+tp[1]-1,+tp[2]);
+  renderAll();
+}
+function goTab(id,btn){
+  document.querySelectorAll('.sec').forEach(function(s){s.classList.remove('on');});
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('tab-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+window.addEventListener('DOMContentLoaded',function(){syncData();});
+</script>
+</body>
+</html>
