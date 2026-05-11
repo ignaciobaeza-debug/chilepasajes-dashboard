@@ -157,7 +157,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
     <div class="card">
       <div class="card-hdr">
         <span class="ctitle">Utilidad diaria por medio</span>
-        <div class="leg">
+        <div class="leg" style="display:none" >
           <span><span class="ld" style="background:var(--tl)"></span>Org&aacute;nico</span>
           <span><span class="ld" style="background:var(--bl)"></span>Google Ads</span>
           <span><span class="ld" style="background:var(--am)"></span>Referidos</span>
@@ -173,7 +173,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
   <div class="card">
     <div class="card-hdr">
       <span class="ctitle">Venta diaria &mdash; actual vs per&iacute;odo anterior</span>
-      <div class="leg">
+      <div class="leg" style="display:none" >
         <span><span class="ld" style="background:var(--bl)"></span>Actual</span>
         <span><span class="ld" style="background:#D1D5DB"></span>Anterior</span>
       </div>
@@ -198,7 +198,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
   <div class="card">
     <div class="card-hdr">
       <span class="ctitle">Evoluci&oacute;n diaria &mdash; utilidad por medio</span>
-      <div class="leg">
+      <div class="leg" style="display:none" >
         <span><span class="ld" style="background:var(--tl)"></span>Org&aacute;nico</span>
         <span><span class="ld" style="background:var(--bl)"></span>Google Ads</span>
         <span><span class="ld" style="background:var(--am)"></span>Referidos</span>
@@ -219,6 +219,29 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
     <button class="btn" onclick="filterEmp('Google Ads',this)">Google Ads</button>
     <button class="btn" onclick="filterEmp('Referidos',this)">Referidos</button>
   </div>
+
+  <!-- Gráfico combinado Venta (barras) + Utilidad (línea) -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-hdr">
+      <span class="ctitle">Top 10 empresas por métrica seleccionada</span>
+      
+    </div>
+    <div class="cw" style="height:260px"><canvas id="ch-emp-combo"></canvas></div>
+    <div style="padding:10px 4px 4px;border-top:1px solid var(--bd);margin-top:8px">
+      <span class="flabel">Empresas en gr&aacute;fico:</span>
+      <select id="emp-select" class="sel" onchange="renderEmpChart()" style="min-width:260px;margin-top:6px">
+        <option value="venta">Top 10 por ventas</option>
+        <option value="comision">Top 10 por comisiones</option>
+        <option value="sobreprecio">Top 10 por sobreprecio</option>
+        <option value="utilidad">Top 10 por utilidad</option>
+        <option value="tx">Top 10 por transacciones</option>
+        <option value="ticket">Top 10 por ticket promedio</option>
+      </select>
+      <div class="cnote" style="margin-top:6px">Por defecto se muestran las 10 empresas con mayor venta. Si eliges una empresa del listado, el gr&aacute;fico muestra solo esa empresa; el orden de la tabla no cambia el gr&aacute;fico.</div>
+    </div>
+  </div>
+
+  <!-- Tabla Top 10 + colapsable -->
   <div class="card" style="padding:0">
     <div class="tbl-wrap">
       <table>
@@ -234,7 +257,12 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
           <th>Mix origen</th>
         </tr></thead>
         <tbody id="emp-tbody"></tbody>
+        <tbody id="emp-tbody-extra" style="display:none"></tbody>
       </table>
+    </div>
+    <div id="emp-toggle-row" style="display:none;padding:10px 16px;border-top:1px solid var(--bd)">
+      <button class="btn" id="emp-toggle-btn" onclick="toggleEmpExtra()">&#9660; Ver m&aacute;s empresas</button>
+      <span class="cnote" id="emp-toggle-count" style="margin-left:8px"></span>
     </div>
   </div>
 </div>
@@ -319,7 +347,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
   <div class="card">
     <div class="card-hdr">
       <span class="ctitle">Evoluci&oacute;n diaria por dispositivo</span>
-      <div class="leg">
+      <div class="leg" style="display:none" >
         <span><span class="ld" style="background:var(--bl)"></span>Celular</span>
         <span><span class="ld" style="background:var(--pu)"></span>PC</span>
         <span><span class="ld" style="background:var(--or)"></span>APP</span>
@@ -481,10 +509,13 @@ function syncData(){
     }).filter(function(r){return r.date;});
     setP(92,'Procesando CAMPANAS_DIARIO…');
     RAW.camp=tableToRows(res[4]).map(function(r){
-      var c=gs(r,'Campaña')||gs(r,'Campaign')||gs(r,'campana')||'';
-      if(!c){var keys=Object.keys(r);c=keys.length>1?gs(r,keys[1]):'';}
-      return{date:mkdV(r['Fecha']||r['fecha']),campana:c,
-             inversion:g(r,'Inversion'),utilidad:g(r,'Utilidad'),estado:gs(r,'Estado')};
+      var rawKeys=Object.keys(r);
+      var campKey=rawKeys.find(function(k){return k.trim().toLowerCase().replace(/\u00f1/g,'n').indexOf('campa')!==-1;});
+      var c=campKey?gs(r,campKey):'';
+      if(!c){c=gs(r,'Campaña')||gs(r,'Campaign')||gs(r,'campana')||'';}
+      if(!c&&rawKeys.length>1){c=gs(r,rawKeys[1]);}
+      return{date:mkdV(r['Fecha']||r['fecha']||r[' Fecha']),campana:c,
+             inversion:g(r,'Inversion')||g(r,' Inversion'),utilidad:g(r,'Utilidad')||g(r,' Utilidad'),estado:gs(r,'Estado')||gs(r,' Estado')};
     }).filter(function(r){return r.date&&r.campana&&r.campana!=='Campaña'&&r.campana!=='Campaign';});
     setP(97,'Construyendo visualizaciones…');
     var totTx=RAW.md.reduce(function(a,r){return a+r.tx;},0);
@@ -597,7 +628,8 @@ function renderMedios(rng){
     }).join('')+'</div>';
 }
 
-var EMP_DATA=[];
+var EMP_DATA=[];var EMP_DATA_RAW=[];var EMP_VIEW=[];
+var EMP_SELECTED=[];
 function renderEmpresas(rng){
   if(!rng) rng=getRange();
   var cur=fR(RAW.emp,rng);
@@ -607,45 +639,60 @@ function renderEmpresas(rng){
     if(!r.empresa) return;
     if(!map[r.empresa]) map[r.empresa]={nombre:r.empresa,venta:0,comision:0,sobreprecio:0,utilidad:0,tx:0,org:0,ads:0,ref:0};
     var e=map[r.empresa];
-    e.venta+=r.venta;e.comision+=r.comision;e.sobreprecio+=r.sobreprecio;e.utilidad+=r.utilidad;e.tx+=r.tx;
-    if(r.medio==='Organico') e.org+=r.tx;
-    else if(r.medio==='Google Ads') e.ads+=r.tx;
-    else e.ref+=r.tx;
+    e.venta+=r.venta; e.comision+=r.comision; e.sobreprecio+=r.sobreprecio; e.utilidad+=r.utilidad; e.tx+=r.tx;
+    if(r.medio==='Organico') e.org+=r.tx; else if(r.medio==='Google Ads') e.ads+=r.tx; else e.ref+=r.tx;
   });
-  EMP_DATA=Object.values(map).map(function(e){return Object.assign({},e,{ticket:e.tx?e.venta/e.tx:0,margen:e.venta?e.utilidad/e.venta:0});});
+  EMPDATA=Object.values(map).map(function(e){ return Object.assign({},e,{ticket:e.tx?e.venta/e.tx:0,margen:e.venta?e.utilidad/e.venta:0}); });
+  EMPDATA_RAW=EMPDATA.slice();
+  var sel=document.getElementById('emp-select');
+  if(sel){ if(!sel.value) sel.value=ST.empGraphSel||'venta'; ST.empGraphSel=sel.value||'venta'; }
   renderEmpTable();
+  renderEmpChart();
 }
+
+function applyEmpSelection(){
+  renderEmpChart();
+}
+
+function renderEmpChart(){
+  var sel=document.getElementById('emp-select');
+  var key=(sel&&sel.value)||ST.empGraphSel||'venta';
+  if(sel) sel.value=key;
+  ST.empGraphSel=key;
+  var src=(EMPDATA_RAW&&EMPDATA_RAW.length?EMPDATA_RAW:EMPDATA)||[];
+  var filtered=src.slice().sort(function(a,b){return (b[key]||0)-(a[key]||0);}).slice(0,10);
+  var el=document.getElementById('ch-emp-combo');
+  if(!el) return;
+  if(CH['ch-emp-combo']){CH['ch-emp-combo'].destroy();delete CH['ch-emp-combo'];}
+  if(!filtered.length) return;
+  CH['ch-emp-combo']=new Chart(el,{type:'bar',data:{labels:filtered.map(function(e){return e.nombre;}),datasets:[{data:filtered.map(function(e){return e[key]||0;}),backgroundColor:'rgba(37,99,235,.72)',borderRadius:6}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var v=ctx.raw||0; if(key==='tx') return ' '+n(v); if(key==='ticket') return ' '+clp(v)+' prom.'; return ' '+clp(v);}}}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},color:'#9CA3AF'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9CA3AF'}}},animation:{duration:250}}});
+}
+
 function renderEmpTable(){
-  EMP_DATA.sort(function(a,b){
+  var arr=(EMPDATA||[]).slice();
+  arr.sort(function(a,b){
     var av=typeof a[ST.empSort]==='string'?a[ST.empSort].toLowerCase():a[ST.empSort];
     var bv=typeof b[ST.empSort]==='string'?b[ST.empSort].toLowerCase():b[ST.empSort];
-    return av<bv?ST.empDir:av>bv?-ST.empDir:0;
+    return av>bv?ST.empDir:av<bv?-ST.empDir:0;
   });
-  document.getElementById('emp-tbody').innerHTML=EMP_DATA.map(function(e){
-    var tot=e.org+e.ads+e.ref||1;
-    var po=(e.org/tot*100).toFixed(0),pa=(e.ads/tot*100).toFixed(0),pr=(e.ref/tot*100).toFixed(0);
-    return'<tr><td><strong>'+e.nombre+'</strong></td>'+
-      '<td class="num">'+clp(e.venta)+'</td><td class="num">'+clp(e.comision)+'</td>'+
-      '<td class="num">'+clp(e.sobreprecio)+'</td><td class="num">'+clp(e.utilidad)+'</td>'+
-      '<td class="num">'+n(e.tx)+'</td><td class="num">'+clp(e.ticket)+'</td>'+
-      '<td class="num">'+((e.margen||0)*100).toFixed(1)+'%</td>'+
-      '<td><div class="cbar-wrap">'+
-        '<div style="width:'+po+'%;background:#0D9488"></div>'+
-        '<div style="width:'+pa+'%;background:#2563EB"></div>'+
-        '<div style="width:'+pr+'%;background:#D97706"></div>'+
-      '</div><div style="font-size:10px;color:var(--tx3);margin-top:3px">'+po+'% org · '+pa+'% ads · '+pr+'% ref</div></td></tr>';
+  document.getElementById('emp-tbody').innerHTML=arr.map(function(e){
+    var tot=(e.org+e.ads+e.ref)||1;
+    var po=e.org/tot*100, pa=e.ads/tot*100, pr=e.ref/tot*100;
+    return '<tr><td><strong>'+e.nombre+'</strong></td><td class="num">'+clp(e.venta)+'</td><td class="num">'+clp(e.comision)+'</td><td class="num">'+clp(e.sobreprecio)+'</td><td class="num"><strong>'+clp(e.utilidad)+'</strong></td><td class="num">'+n(e.tx)+'</td><td class="num">'+clp(e.ticket)+'</td><td class="num">'+(e.margen*100).toFixed(1)+'%</td><td><div class="cbar-wrap"><div style="width:'+po.toFixed(0)+'%;background:#0D9488"></div><div style="width:'+pa.toFixed(0)+'%;background:#2563EB"></div><div style="width:'+pr.toFixed(0)+'%;background:#D97706"></div></div><div style="font-size:10px;color:var(--tx3);margin-top:3px">'+po.toFixed(0)+'% org · '+pa.toFixed(0)+'% ads · '+pr.toFixed(0)+'% ref</div></td></tr>';
   }).join('');
 }
+
 function filterEmp(m,btn){
   ST.empMedio=m;
   document.querySelectorAll('#tab-empresas .btn').forEach(function(b){b.classList.remove('on');});
-  btn.classList.add('on');renderEmpresas();
-}
-function sortEmp(col){
-  if(ST.empSort===col) ST.empDir*=-1;else{ST.empSort=col;ST.empDir=-1;}
-  renderEmpTable();
+  if(btn) btn.classList.add('on');
+  renderEmpresas();
 }
 
+function sortEmp(col){
+  if(ST.empSort===col) ST.empDir*=-1; else { ST.empSort=col; ST.empDir=-1; }
+  renderEmpTable();
+}
 /* ═══════════ RUTAS ═══════════ */
 var RUTAS_DATA=[];
 var RUTA_SORT={col:'utilidad',dir:-1};
@@ -752,7 +799,7 @@ function renderRutasEmp(met,busq){
         '<div style="width:11px;height:11px;border-radius:3px;background:'+c+';flex-shrink:0"></div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-weight:700;font-size:13px;color:var(--tx)">'+e.emp+'</div>'+
-          '<div style="font-size:11px;color:var(--tx3);margin-top:1px">'+e.rutas.length+' rutas · '+n(e.tx)+' tx</div>'+
+          '<div style="font-size:11px;color:var(--tx3);margin-top:1px">'+e.rutas.length+' rutas ·  tx</div>'+
         '</div>'+
         '<div style="text-align:right;margin-right:10px">'+
           '<div style="font-size:16px;font-weight:700;color:'+c+'">'+metFmt[met](e[met])+'</div>'+
@@ -858,43 +905,51 @@ function renderCampanas(rng){
     {l:'Net (Util−Inv)',v:clp(net)},{l:'ROAS real',v:roas.toFixed(2)+'×'},
     {l:'Clics totales',v:n(clics)},{l:'Sesiones',v:n(ses)}
   ].map(function(k){return'<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div></div>';}).join('');
+
   mkChart('ch-roas-daily','line',res.map(function(r){return dlbl(r.date);}),
     [{label:'ROAS',data:res.map(function(r){return r.roas;}),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.3}],
     {yFmt:function(v){return v.toFixed(1)+'×';}});
+
   mkChart('ch-net-daily','bar',res.map(function(r){return dlbl(r.date);}),
-    [{label:'Net',data:res.map(function(r){return r.net;}),
-      backgroundColor:res.map(function(r){return r.net>=0?'rgba(5,150,105,.72)':'rgba(220,38,38,.65)';}),borderRadius:4}],{yFmt:clp});
+    [{label:'Net',data:res.map(function(r){return r.net;}),backgroundColor:res.map(function(r){return r.net>=0?'rgba(5,150,105,.72)':'rgba(220,38,38,.65)';}),borderRadius:4}],
+    {yFmt:clp});
+
   var cMap={};
   camp.forEach(function(r){
     if(!r.campana) return;
     if(!cMap[r.campana]) cMap[r.campana]={campana:r.campana,inv:0,util:0,estados:[]};
-    cMap[r.campana].inv+=r.inversion;cMap[r.campana].util+=r.utilidad;
+    cMap[r.campana].inv+=r.inversion||0;
+    cMap[r.campana].util+=r.utilidad||0;
     if(r.estado) cMap[r.campana].estados.push(r.estado);
   });
   var camps=Object.values(cMap).sort(function(a,b){return b.inv-a.inv;});
-  var cR=camps.map(function(c){return{name:c.campana.replace('CLP-',''),roas:c.inv?c.util/c.inv:0};}).sort(function(a,b){return b.roas-a.roas;});
-  mkChart('ch-roas-camp','bar',cR.map(function(c){return c.name;}),
-    [{label:'ROAS',data:cR.map(function(c){return c.roas;}),
-      backgroundColor:cR.map(function(c){return c.roas>=1?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)';}),borderRadius:4}],
-    {yFmt:function(v){return v.toFixed(2)+'×';}});
-  var maxI=camps.length?camps[0].inv:1;
+
+  mkChart('ch-roas-camp','bar',
+    camps.map(function(c){return c.campana.replace('CLP-','');}),
+    [
+      {label:'ROAS real',data:camps.map(function(c){return c.inv?c.util/c.inv:0;}),backgroundColor:camps.map(function(c){return (c.inv?c.util/c.inv:0)>=1?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)';}),borderRadius:4},
+      {label:'Umbral 1×',data:camps.map(function(){return 1;}),type:'line',borderColor:'rgba(107,114,128,.7)',borderDash:[4,3],pointRadius:0,fill:false}
+    ],
+    {horizontal:true,yFmt:function(v){return Number(v).toFixed(2)+'×';}}
+  );
+
+  var maxI=camps.length?Math.max.apply(null,camps.map(function(c){return c.inv||0;})):1;
   document.getElementById('camp-bars').innerHTML=camps.map(function(c){
     var r=c.inv?c.util/c.inv:0;
-    return'<div class="rbar"><div class="rname" title="'+c.campana+'">'+c.campana.replace('CLP-','')+'</div>'+
-           '<div class="rtrack"><div class="rfill" style="width:'+((c.inv/maxI)*100).toFixed(1)+'%;background:var(--bl)"></div></div>'+
-           '<div class="rvals"><div class="rv1">'+clp(c.inv)+'</div><div class="rv2">ROAS: '+(c.inv?r.toFixed(2)+'×':'—')+'</div></div></div>';
-  }).join('');
+    return '<div class="rbar"><div class="rname" title="'+c.campana+'">'+c.campana.replace('CLP-','')+'</div>'+
+           '<div class="rtrack"><div class="rfill" style="width:'+((maxI?c.inv/maxI:0)*100).toFixed(1)+'%;background:var(--bl)"></div></div>'+
+           '<div class="rvals"><div class="rv1">'+clp(c.inv)+'</div><div class="rv2">ROAS: '+r.toFixed(2)+'×</div></div></div>';
+  }).join('') || '<div style="padding:16px;color:var(--tx3)">Sin datos de campañas</div>';
+
   document.getElementById('camp-tbody').innerHTML=camps.map(function(c){
-    var r=c.inv?c.util/c.inv:0,net2=c.util-c.inv;
-    var est=c.estados.length?c.estados[c.estados.length-1]:'—';
-    return'<tr><td><strong>'+c.campana+'</strong></td><td class="num">'+clp(c.inv)+'</td>'+
-      '<td class="num">'+clp(c.util)+'</td><td class="num"><strong>'+r.toFixed(2)+'×</strong></td>'+
-      '<td class="num" style="color:'+(net2>=0?'var(--gn)':'var(--rd)')+'">'+(net2>=0?'+':'')+clp(net2)+'</td>'+
-      '<td><span class="tag '+(est==='apta'?'tg':est==='limitada'?'tw':'tb')+'">'+est+'</span></td></tr>';
+    var r=c.inv?c.util/c.inv:0,net2=(c.util||0)-(c.inv||0),est=c.estados.length?c.estados[c.estados.length-1]:'—';
+    return '<tr><td><strong>'+c.campana+'</strong></td><td class="num">'+clp(c.inv)+'</td><td class="num">'+clp(c.util)+'</td><td class="num"><strong>'+r.toFixed(2)+'×</strong></td><td class="num" style="color:'+(net2>=0?'var(--gn)':'var(--rd)')+'">'+(net2>=0?'+':'')+clp(net2)+'</td><td><span class="tag '+(est==='apta'?'tg':est==='limitada'?'tw':'tb')+'">'+est+'</span></td></tr>';
   }).join('');
+
   mkChart('ch-trafico','line',res.map(function(r){return dlbl(r.date);}),
     [{label:'Clics',data:res.map(function(r){return r.clics;}),borderColor:'#2563EB',tension:.3},
-     {label:'Sesiones',data:res.map(function(r){return r.sesiones;}),borderColor:'#0D9488',tension:.3}],{yFmt:n});
+     {label:'Sesiones',data:res.map(function(r){return r.sesiones;}),borderColor:'#0D9488',tension:.3}],
+    {yFmt:n});
 }
 
 function buildDM(arr,rng){
@@ -971,5 +1026,3 @@ function goTab(id,btn){
 }
 window.addEventListener('DOMContentLoaded',function(){syncData();});
 </script>
-</body>
-</html>
