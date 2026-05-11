@@ -930,7 +930,7 @@ function renderCampanas(rng){
       {label:'ROAS real',data:camps.map(function(c){return c.inv?c.util/c.inv:0;}),backgroundColor:camps.map(function(c){return (c.inv?c.util/c.inv:0)>=1?'rgba(5,150,105,.75)':'rgba(220,38,38,.65)';}),borderRadius:4},
       {label:'Umbral 1×',data:camps.map(function(){return 1;}),type:'line',borderColor:'rgba(107,114,128,.7)',borderDash:[4,3],pointRadius:0,fill:false}
     ],
-    {horizontal:true,yFmt:function(v){return Number(v).toFixed(2)+'×';}}
+    {yFmt:function(v){return Number(v).toFixed(2)+'×';}}
   );
 
   var maxI=camps.length?Math.max.apply(null,camps.map(function(c){return c.inv||0;})):1;
