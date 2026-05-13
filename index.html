@@ -152,7 +152,13 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
 
 <!-- ═══════════ RESUMEN ═══════════ -->
 <div id="tab-resumen" class="sec on">
-  <div class="kgrid" id="kpi-res"></div>
+  <div id="res-medio-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+  <button class="btn on" onclick="filterRes('all',this)">Todos los medios</button>
+  <button class="btn" onclick="filterRes('Organico',this)">Orgánico</button>
+  <button class="btn" onclick="filterRes('Google Ads',this)">Google Ads</button>
+  <button class="btn" onclick="filterRes('Referidos',this)">Referidos</button>
+</div>
+<div class="kgrid" id="kpi-res"></div>
   <div class="g2">
     <div class="card">
       <div class="card-hdr">
@@ -404,7 +410,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--sf)}
 <script>
 var SID  = '18AMPU0r1BzSY_-Mw_g2G4kzrISlYJXFMfx_GrJAXasQ';
 var RAW  = {md:[],emp:[],ruta:[],res:[],camp:[]};
-var ST   = {period:'7d',from:null,to:null,empMedio:'all',empSort:'utilidad',empDir:-1};
+var ST   = {period:'7d',from:null,to:null,empMedio:'all',resMedio:'all',empSort:'utilidad',empDir:-1};
 var CH   = {};
 
 function clp(v){return '$\u00a0'+Math.round(v).toLocaleString('es-CL');}
@@ -558,7 +564,8 @@ function renderAll(){
 }
 
 function renderResumen(rng){
-  var cur=fR(RAW.md,rng),prv=fR(RAW.md,prev(rng)),res=fR(RAW.res,rng);
+  var curAll=fR(RAW.md,rng),prv=fR(RAW.md,prev(rng)),res=fR(RAW.res,rng);
+  var cur=ST.resMedio==='all'?curAll:curAll.filter(function(r){return r.medio===ST.resMedio;});
   function sm(a){return a.reduce(function(t,r){return{v:t.v+r.venta,u:t.u+r.utilidad,c:t.c+r.comision,s:t.s+r.sobreprecio,tx:t.tx+r.tx};},{v:0,u:0,c:0,s:0,tx:0});}
   var C=sm(cur),P=sm(prv);
   var inv=res.reduce(function(a,r){return a+r.inversion;},0);
@@ -575,8 +582,7 @@ function renderResumen(rng){
     {l:'Inversión Ads',v:clp(inv),s:''},
     {l:'Net (Util−Inv)',v:clp(net),s:'<span class="dt '+(net>=0?'up':'dn')+'">'+(net>=0?'▲':'▼')+'</span>'},
     {l:'ROAS real',v:roas?roas.toFixed(2)+'×':'—',s:''}
-  ].map(function(k){return '<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div>'+(k.s?'<div class="kft">'+k.s+'</div>':'')+'</div>';}).join('');
-  var days=buildDM(cur,rng);
+  ].map(function(k){return '<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div>'+(k.s?'<div class="kft">'+k.s+'</div>':'')+'</div>';}).join('');  var days=buildDM(cur,rng);
   mkChart('ch-res-util','bar',days.map(function(d){return d.lbl;}),
     [{label:'Orgánico',data:days.map(function(d){return d.uOrg;}),backgroundColor:'rgba(13,148,136,.72)',stack:'a'},
      {label:'Google Ads',data:days.map(function(d){return d.uAds;}),backgroundColor:'rgba(37,99,235,.72)',stack:'a'},
@@ -680,6 +686,13 @@ function renderEmpTable(){
     var po=e.org/tot*100, pa=e.ads/tot*100, pr=e.ref/tot*100;
     return '<tr><td><strong>'+e.nombre+'</strong></td><td class="num">'+clp(e.venta)+'</td><td class="num">'+clp(e.comision)+'</td><td class="num">'+clp(e.sobreprecio)+'</td><td class="num"><strong>'+clp(e.utilidad)+'</strong></td><td class="num">'+n(e.tx)+'</td><td class="num">'+clp(e.ticket)+'</td><td class="num">'+(e.margen*100).toFixed(1)+'%</td><td><div class="cbar-wrap"><div style="width:'+po.toFixed(0)+'%;background:#0D9488"></div><div style="width:'+pa.toFixed(0)+'%;background:#2563EB"></div><div style="width:'+pr.toFixed(0)+'%;background:#D97706"></div></div><div style="font-size:10px;color:var(--tx3);margin-top:3px">'+po.toFixed(0)+'% org · '+pa.toFixed(0)+'% ads · '+pr.toFixed(0)+'% ref</div></td></tr>';
   }).join('');
+}
+
+function filterRes(m,btn){
+  ST.resMedio=m;
+  document.querySelectorAll('#res-medio-btns .btn').forEach(function(b){b.classList.remove('on');});
+  if(btn) btn.classList.add('on');
+  renderResumen(getRange());
 }
 
 function filterEmp(m,btn){
