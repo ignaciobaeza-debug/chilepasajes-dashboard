@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">A
 <title>Chilepasajes · Dashboard v5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -564,31 +564,51 @@ function renderAll(){
 }
 
 function renderResumen(rng){
-  var curAll=fR(RAW.md,rng),prv=fR(RAW.md,prev(rng)),res=fR(RAW.res,rng);
-  var cur=ST.resMedio==='all'?curAll:curAll.filter(function(r){return r.medio===ST.resMedio;});
+  var curAll=fR(RAW.md,rng),prvAll=fR(RAW.md,prev(rng)),res=fR(RAW.res,rng);
+  var medio=ST.resMedio;
+  var cur=medio==='all'?curAll:curAll.filter(function(r){return r.medio===medio;});
+  var prv=medio==='all'?prvAll:prvAll.filter(function(r){return r.medio===medio;});
   function sm(a){return a.reduce(function(t,r){return{v:t.v+r.venta,u:t.u+r.utilidad,c:t.c+r.comision,s:t.s+r.sobreprecio,tx:t.tx+r.tx};},{v:0,u:0,c:0,s:0,tx:0});}
   var C=sm(cur),P=sm(prv);
-  var inv=res.reduce(function(a,r){return a+r.inversion;},0);
+  // Inversión y ROAS: solo tiene sentido para Google Ads o "Todos"
+  var showAds=(medio==='all'||medio==='Google Ads');
+  var inv=showAds?res.reduce(function(a,r){return a+r.inversion;},0):0;
   var net=C.u-inv,roas=inv?C.u/inv:0;
   function dt(cv,pv){
     if(!pv) return '<span class="dt nt">—</span>';
     var d=((cv-pv)/pv)*100;
     return '<span class="dt '+(d>=0?'up':'dn')+'">'+(d>=0?'▲':'▼')+' '+Math.abs(d).toFixed(1)+'%</span>';
   }
-  document.getElementById('kpi-res').innerHTML=[
+  var kpis=[
     {l:'Venta total',v:clp(C.v),s:dt(C.v,P.v)},{l:'Utilidad',v:clp(C.u),s:dt(C.u,P.u)},
     {l:'Comisión',v:clp(C.c),s:''},{l:'Sobreprecio',v:clp(C.s),s:''},
-    {l:'Transacciones',v:n(C.tx),s:dt(C.tx,P.tx)},{l:'Ticket prom.',v:C.tx?clp(C.v/C.tx):'—',s:''},
-    {l:'Inversión Ads',v:clp(inv),s:''},
-    {l:'Net (Util−Inv)',v:clp(net),s:'<span class="dt '+(net>=0?'up':'dn')+'">'+(net>=0?'▲':'▼')+'</span>'},
-    {l:'ROAS real',v:roas?roas.toFixed(2)+'×':'—',s:''}
-  ].map(function(k){return '<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div>'+(k.s?'<div class="kft">'+k.s+'</div>':'')+'</div>';}).join('');  var days=buildDM(cur,rng);
-  mkChart('ch-res-util','bar',days.map(function(d){return d.lbl;}),
-    [{label:'Orgánico',data:days.map(function(d){return d.uOrg;}),backgroundColor:'rgba(13,148,136,.72)',stack:'a'},
-     {label:'Google Ads',data:days.map(function(d){return d.uAds;}),backgroundColor:'rgba(37,99,235,.72)',stack:'a'},
-     {label:'Referidos',data:days.map(function(d){return d.uRef;}),backgroundColor:'rgba(217,119,6,.72)',stack:'a'}],
-    {stacked:true,yFmt:clp});
-  var pd=buildDM(fR(RAW.md,prev(rng)),prev(rng));
+    {l:'Transacciones',v:n(C.tx),s:dt(C.tx,P.tx)},{l:'Ticket prom.',v:C.tx?clp(C.v/C.tx):'—',s:''}
+  ];
+  if(showAds){
+    kpis.push({l:'Inversión Ads',v:clp(inv),s:''});
+    kpis.push({l:'Net (Util−Inv)',v:clp(net),s:'<span class="dt '+(net>=0?'up':'dn')+'">'+(net>=0?'▲':'▼')+'</span>'});
+    kpis.push({l:'ROAS real',v:roas?roas.toFixed(2)+'×':'—',s:''});
+  }
+  document.getElementById('kpi-res').innerHTML=kpis.map(function(k){
+    return '<div class="kcard"><div class="klbl">'+k.l+'</div><div class="kval">'+k.v+'</div>'+(k.s?'<div class="kft">'+k.s+'</div>':'')+'</div>';
+  }).join('');
+
+  var days=buildDM(cur,rng);
+  // Gráfico de utilidad diaria: adaptar según filtro de medio
+  var chartDatasets;
+  if(medio==='all'){
+    chartDatasets=[
+      {label:'Orgánico',data:days.map(function(d){return d.uOrg;}),backgroundColor:'rgba(13,148,136,.72)',stack:'a'},
+      {label:'Google Ads',data:days.map(function(d){return d.uAds;}),backgroundColor:'rgba(37,99,235,.72)',stack:'a'},
+      {label:'Referidos',data:days.map(function(d){return d.uRef;}),backgroundColor:'rgba(217,119,6,.72)',stack:'a'}
+    ];
+  } else {
+    var color=medio==='Organico'?'rgba(13,148,136,.72)':medio==='Google Ads'?'rgba(37,99,235,.72)':'rgba(217,119,6,.72)';
+    chartDatasets=[{label:medio,data:days.map(function(d){return d.utilidad;}),backgroundColor:color,stack:'a'}];
+  }
+  mkChart('ch-res-util','bar',days.map(function(d){return d.lbl;}),chartDatasets,{stacked:true,yFmt:clp});
+
+  var pd=buildDM(medio==='all'?fR(RAW.md,prev(rng)):fR(RAW.md,prev(rng)).filter(function(r){return r.medio===medio;}),prev(rng));
   var iL=Array.from({length:Math.max(days.length,pd.length)},function(_,i){return 'Día '+(i+1);});
   mkChart('ch-res-cmp','line',iL,
     [{label:'Actual',data:days.map(function(d){return d.venta;}),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.07)',fill:true,tension:.3},
@@ -980,6 +1000,7 @@ function buildDM(arr,rng){
     else if(r.disp==='PC') d.uPC+=r.utilidad;
     else if(r.disp==='APP') d.uAPP+=r.utilidad;
   });
+  // utilidad ya se acumula en d.utilidad — disponible para filtros de un solo medio
   var out=[],d=new Date(rng.from);
   while(d<=rng.to){
     var k=dkey(d);
